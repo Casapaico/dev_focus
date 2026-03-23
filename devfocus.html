@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DevFocus — Tu compañero de carrera</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3e;
+    --accent: #00e5ff;
+    --accent2: #ff6b35;
+    --accent3: #7fff6b;
+    --warn: #ffd166;
+    --danger: #ff4d6d;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --font-display: 'Syne', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+    --radius: 8px;
+    --glow: 0 0 20px rgba(0,229,255,0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font-mono); min-height: 100vh; overflow-x: hidden; }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  .screen { display: none; position: relative; z-index: 1; }
+  .screen.active { display: block; }
+
+  /* ======================== SETUP ======================== */
+  #setup {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 40px 20px;
+  }
+
+  .logo { font-family: var(--font-display); font-size: clamp(2rem,6vw,3.5rem); font-weight: 800; letter-spacing: -2px; margin-bottom: 6px; }
+  .logo span { color: var(--accent); }
+  .tagline { color: var(--muted); font-size: 0.8rem; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 48px; }
+
+  .setup-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 36px; width: 100%; max-width: 600px; box-shadow: var(--glow); }
+
+  .setup-tabs { display: flex; gap: 4px; margin-bottom: 28px; background: var(--surface2); border-radius: var(--radius); padding: 4px; }
+  .setup-tab { flex: 1; background: transparent; border: none; border-radius: 6px; color: var(--muted); cursor: pointer; font-family: var(--font-mono); font-size: 0.72rem; padding: 8px; transition: all 0.2s; }
+  .setup-tab.active { background: var(--surface); color: var(--accent); }
+
+  .setup-panel { display: none; }
+  .setup-panel.active { display: block; }
+
+  .setup-step { margin-bottom: 24px; }
+  .step-label { font-family: var(--font-display); font-size: 0.7rem; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  .setup-step h3 { font-family: var(--font-display); font-size: 1rem; font-weight: 700; margin-bottom: 12px; color: var(--text); }
+
+  input[type="text"], input[type="number"], textarea {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+    color: var(--text); font-family: var(--font-mono); font-size: 0.85rem; padding: 10px 14px;
+    width: 100%; outline: none; transition: border-color 0.2s;
+  }
+  input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(0,229,255,0.1); }
+  textarea { resize: vertical; min-height: 70px; }
+
+  .technique-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tech-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--muted); cursor: pointer; font-family: var(--font-mono); font-size: 0.78rem; padding: 14px 12px; text-align: left; transition: all 0.2s; }
+  .tech-btn .tech-name { font-weight: 700; color: var(--text); display: block; margin-bottom: 3px; }
+  .tech-btn .tech-time { font-size: 0.7rem; color: var(--muted); }
+  .tech-btn:hover { border-color: var(--accent); }
+  .tech-btn.selected { border-color: var(--accent); background: rgba(0,229,255,0.07); }
+  .tech-btn.selected .tech-name { color: var(--accent); }
+
+  .custom-time { display: none; gap: 10px; margin-top: 12px; }
+  .custom-time.show { display: flex; }
+  .custom-time label { font-size: 0.7rem; color: var(--muted); display: block; margin-bottom: 4px; }
+
+  .duration-row { display: flex; align-items: center; gap: 16px; }
+  .duration-row input[type="range"] { flex: 1; -webkit-appearance: none; height: 4px; background: var(--border); border-radius: 2px; outline: none; cursor: pointer; }
+  .duration-row input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 8px rgba(0,229,255,0.5); }
+  .duration-val { font-family: var(--font-display); font-size: 1.2rem; font-weight: 800; color: var(--accent); min-width: 70px; text-align: right; }
+
+  /* URL Lists */
+  .url-list-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; min-height: 80px; max-height: 150px; overflow-y: auto; margin-bottom: 8px; }
+  .url-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border-radius: 4px; font-size: 0.72rem; padding: 4px 10px; margin: 3px; cursor: pointer; transition: all 0.2s; }
+  .url-tag.allowed { border: 1px solid rgba(0,229,255,0.3); color: var(--accent); }
+  .url-tag.blocked { border: 1px solid rgba(255,77,109,0.3); color: var(--danger); }
+  .url-tag:hover { opacity: 0.7; }
+  .url-tag .remove { font-size: 0.8rem; opacity: 0.6; }
+  .url-input-row { display: flex; gap: 8px; }
+  .url-input-row input { flex: 1; }
+  .btn-add { background: var(--accent); border: none; border-radius: var(--radius); color: #000; cursor: pointer; font-family: var(--font-display); font-weight: 700; font-size: 0.75rem; padding: 0 16px; white-space: nowrap; transition: all 0.2s; }
+  .btn-add.danger { background: var(--danger); color: #fff; }
+  .btn-add:hover { opacity: 0.85; }
+
+  .hint-text { font-size: 0.7rem; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .motivation-tag { display: inline-block; background: rgba(127,255,107,0.08); border: 1px solid rgba(127,255,107,0.2); border-radius: 4px; color: var(--accent3); font-size: 0.7rem; padding: 4px 10px; margin-top: 8px; }
+
+  /* Extension status */
+  .ext-status { display: flex; align-items: center; gap: 10px; background: var(--surface2); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 16px; }
+  .ext-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .ext-dot.connected { background: var(--accent3); box-shadow: 0 0 8px rgba(127,255,107,0.5); animation: pulse 2s infinite; }
+  .ext-dot.disconnected { background: var(--danger); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .ext-status-text { font-size: 0.75rem; }
+  .ext-status-text strong { display: block; margin-bottom: 2px; }
+  .ext-status-text span { color: var(--muted); font-size: 0.7rem; }
+
+  .btn-primary { background: var(--accent); border: none; border-radius: var(--radius); color: #000; cursor: pointer; font-family: var(--font-display); font-size: 1rem; font-weight: 800; letter-spacing: 1px; padding: 16px 32px; width: 100%; transition: all 0.2s; text-transform: uppercase; margin-top: 8px; }
+  .btn-primary:hover { background: #33ebff; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,229,255,0.3); }
+  .btn-secondary { background: transparent; border: 1px solid var(--border); border-radius: var(--radius); color: var(--muted); cursor: pointer; font-family: var(--font-mono); font-size: 0.8rem; padding: 8px 16px; transition: all 0.2s; }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ======================== MAIN APP ======================== */
+  #app { display: none; min-height: 100vh; flex-direction: column; }
+  #app.active { display: flex; }
+
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; flex-wrap: wrap; gap: 12px; }
+  .topbar-left { display: flex; align-items: center; gap: 16px; }
+  .topbar-logo { font-family: var(--font-display); font-size: 1.1rem; font-weight: 800; letter-spacing: -1px; }
+  .topbar-logo span { color: var(--accent); }
+  .student-name-top { font-size: 0.75rem; color: var(--muted); border-left: 1px solid var(--border); padding-left: 16px; }
+  .student-name-top strong { color: var(--text); }
+
+  .timer-big { font-family: var(--font-display); font-size: clamp(2rem,5vw,3rem); font-weight: 800; letter-spacing: -2px; color: var(--accent); text-shadow: 0 0 30px rgba(0,229,255,0.4); min-width: 120px; text-align: center; }
+  .timer-big.break-mode { color: var(--accent3); text-shadow: 0 0 30px rgba(127,255,107,0.4); }
+  .timer-big.pause-mode { color: var(--warn); }
+  .timer-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; text-align: center; }
+
+  .topbar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .distraction-counter { background: rgba(255,77,109,0.1); border: 1px solid rgba(255,77,109,0.3); border-radius: 6px; color: var(--danger); font-size: 0.75rem; padding: 6px 12px; cursor: pointer; transition: all 0.2s; }
+  .distraction-counter:hover { background: rgba(255,77,109,0.2); }
+  .distraction-counter span { font-weight: 700; font-size: 1rem; }
+  .streak-badge { background: rgba(255,209,102,0.1); border: 1px solid rgba(255,209,102,0.3); border-radius: 6px; color: var(--warn); font-size: 0.75rem; padding: 6px 12px; }
+  .ext-badge { background: rgba(127,255,107,0.1); border: 1px solid rgba(127,255,107,0.3); border-radius: 6px; color: var(--accent3); font-size: 0.7rem; padding: 6px 12px; }
+  .ext-badge.offline { background: rgba(107,107,138,0.1); border-color: var(--border); color: var(--muted); }
+
+  .app-body { display: grid; grid-template-columns: 1fr 340px; gap: 0; flex: 1; }
+  @media (max-width: 900px) { .app-body { grid-template-columns: 1fr; } }
+
+  .center-panel { padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+
+  .session-banner { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .session-info h2 { font-family: var(--font-display); font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+  .session-info p { font-size: 0.75rem; color: var(--muted); }
+  .session-stats { display: flex; gap: 24px; }
+  .stat-block { text-align: center; }
+  .stat-block .val { font-family: var(--font-display); font-size: 1.5rem; font-weight: 800; color: var(--accent); }
+  .stat-block .val.orange { color: var(--accent2); }
+  .stat-block .val.green { color: var(--accent3); }
+  .stat-block .lbl { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+  .timer-controls { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn-control { flex: 1; min-width: 100px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); cursor: pointer; font-family: var(--font-mono); font-size: 0.8rem; padding: 12px 16px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-control:hover { border-color: var(--accent); }
+  .btn-control.start { background: rgba(0,229,255,0.1); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .btn-control.pause { background: rgba(255,209,102,0.1); border-color: var(--warn); color: var(--warn); }
+  .btn-control.break-btn { background: rgba(127,255,107,0.1); border-color: var(--accent3); color: var(--accent3); }
+  .btn-control.stop { background: rgba(255,77,109,0.1); border-color: var(--danger); color: var(--danger); }
+  .btn-control.motivate { background: rgba(255,107,53,0.1); border-color: var(--accent2); color: var(--accent2); }
+
+  .progress-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; }
+  .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .progress-header span { font-size: 0.75rem; color: var(--muted); }
+  .progress-header strong { font-family: var(--font-display); color: var(--text); }
+  .progress-track { background: var(--surface2); border-radius: 4px; height: 8px; overflow: hidden; position: relative; }
+  .progress-fill { background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 4px; height: 100%; transition: width 1s linear; }
+  .pomodoro-dots { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .pomo-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); transition: background 0.3s; }
+  .pomo-dot.done { background: var(--accent); }
+  .pomo-dot.current { background: var(--accent2); animation: blink-dot 1s infinite; }
+  @keyframes blink-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .question-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; position: relative; overflow: hidden; }
+  .question-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); }
+  .q-type-badge { display: inline-block; background: rgba(0,229,255,0.1); border: 1px solid rgba(0,229,255,0.2); border-radius: 4px; color: var(--accent); font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase; padding: 3px 8px; margin-bottom: 12px; }
+  .q-type-badge.tech { background: rgba(255,107,53,0.1); border-color: rgba(255,107,53,0.2); color: var(--accent2); }
+  .q-type-badge.fun { background: rgba(127,255,107,0.1); border-color: rgba(127,255,107,0.2); color: var(--accent3); }
+  .q-type-badge.psych { background: rgba(255,209,102,0.1); border-color: rgba(255,209,102,0.2); color: var(--warn); }
+  .question-text { font-family: var(--font-display); font-size: 1rem; font-weight: 600; line-height: 1.5; margin-bottom: 16px; }
+  .answer-area { display: flex; gap: 10px; }
+  .answer-area textarea { flex: 1; min-height: 60px; font-size: 0.82rem; }
+  .answer-area .btn-ans { background: var(--accent); border: none; border-radius: var(--radius); color: #000; cursor: pointer; font-family: var(--font-display); font-weight: 700; font-size: 0.75rem; padding: 0 20px; white-space: nowrap; transition: all 0.2s; }
+  .answer-area .btn-ans:hover { background: #33ebff; }
+  .skip-link { font-size: 0.7rem; color: var(--muted); cursor: pointer; text-decoration: underline; margin-top: 8px; display: inline-block; }
+
+  .objective-card { background: rgba(127,255,107,0.05); border: 1px solid rgba(127,255,107,0.2); border-radius: 12px; padding: 20px 24px; }
+  .objective-card h4 { font-family: var(--font-display); font-size: 0.8rem; font-weight: 700; color: var(--accent3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+  .objective-text { font-size: 0.85rem; color: var(--text); line-height: 1.6; }
+
+  /* MOTIVACION PANEL */
+  .motivation-panel { background: var(--surface); border: 1px solid rgba(255,107,53,0.3); border-radius: 12px; padding: 0; overflow: hidden; display: none; }
+  .motivation-panel.show { display: block; animation: slideIn 0.3s ease; }
+  @keyframes slideIn { from{transform:translateY(10px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .motiv-header { background: rgba(255,107,53,0.1); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+  .motiv-header h3 { font-family: var(--font-display); font-size: 1rem; font-weight: 800; color: var(--accent2); }
+  .motiv-body { padding: 20px; }
+  .motiv-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .motiv-option { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; font-family: var(--font-mono); font-size: 0.75rem; padding: 12px; text-align: left; transition: all 0.2s; color: var(--text); }
+  .motiv-option:hover { border-color: var(--accent2); color: var(--accent2); }
+  .motiv-response { background: var(--surface2); border-left: 3px solid var(--accent2); border-radius: var(--radius); padding: 16px; font-size: 0.82rem; line-height: 1.6; display: none; }
+  .motiv-response.show { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+  /* SIDEBAR */
+  .sidebar { background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; max-height: calc(100vh - 65px); position: sticky; top: 65px; }
+  .sidebar-section { padding: 18px; border-bottom: 1px solid var(--border); }
+  .sidebar-title { font-family: var(--font-display); font-size: 0.65rem; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .sidebar-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* URL Monitor in sidebar */
+  .url-monitor-item { background: var(--surface2); border-radius: 6px; padding: 8px 12px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; font-size: 0.72rem; }
+  .url-monitor-item .dom { color: var(--text); }
+  .url-monitor-item .time { color: var(--danger); font-weight: 700; }
+  .url-monitor-item.allowed { border-left: 2px solid var(--accent3); }
+  .url-monitor-item.allowed .time { color: var(--accent3); }
+
+  .log-entries { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; }
+  .log-entry { background: var(--surface2); border-radius: 6px; font-size: 0.72rem; padding: 7px 10px; line-height: 1.4; border-left: 2px solid var(--border); }
+  .log-entry.answer { border-left-color: var(--accent); }
+  .log-entry.alert { border-left-color: var(--warn); }
+  .log-entry.distract { border-left-color: var(--danger); }
+  .log-entry .log-time { color: var(--muted); margin-right: 6px; }
+
+  .tech-item { background: var(--surface2); border-radius: 8px; padding: 12px; margin-bottom: 8px; font-size: 0.75rem; }
+  .tech-item strong { color: var(--accent2); display: block; margin-bottom: 4px; }
+  .tech-item p { color: var(--muted); line-height: 1.5; }
+
+  .export-btns { display: flex; gap: 8px; }
+  .btn-export { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); cursor: pointer; font-family: var(--font-mono); font-size: 0.75rem; padding: 10px; text-align: center; transition: all 0.2s; }
+  .btn-export:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-export.json:hover { border-color: var(--accent3); color: var(--accent3); }
+
+  /* OVERLAYS */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .overlay.show { display: flex; }
+  .alert-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 40px; text-align: center; max-width: 460px; width: 90%; animation: boxIn 0.3s ease; }
+  @keyframes boxIn { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .alert-icon { font-size: 3rem; margin-bottom: 16px; }
+  .alert-box h2 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 800; margin-bottom: 12px; }
+  .alert-box p { font-size: 0.85rem; color: var(--muted); line-height: 1.6; margin-bottom: 24px; }
+  .alert-accent { color: var(--accent); }
+  .alert-warn { color: var(--warn); }
+  .alert-green { color: var(--accent3); }
+  .alert-orange { color: var(--accent2); }
+  #break-overlay .alert-box { border-color: rgba(127,255,107,0.3); box-shadow: 0 0 40px rgba(127,255,107,0.1); }
+  #focus-alert .alert-box { border-color: rgba(255,77,109,0.3); box-shadow: 0 0 40px rgba(255,77,109,0.1); }
+
+  /* DISTRACTION TOAST */
+  .distraction-overlay { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--danger); border-radius: 12px; padding: 16px 20px; z-index: 500; box-shadow: 0 0 20px rgba(255,77,109,0.2); animation: slideRight 0.4s ease; max-width: 300px; display: none; }
+  @keyframes slideRight { from{transform:translateX(100px);opacity:0} to{transform:translateX(0);opacity:1} }
+  .distraction-overlay h4 { font-family: var(--font-display); color: var(--danger); margin-bottom: 6px; font-size: 0.9rem; }
+  .distraction-overlay p { font-size: 0.75rem; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }
+
+  /* TOAST */
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--accent3); border-radius: 10px; padding: 14px 24px; z-index: 600; font-size: 0.85rem; color: var(--accent3); text-align: center; max-width: 440px; width: 90%; display: none; box-shadow: 0 0 20px rgba(127,255,107,0.15); }
+
+  /* VISIBILITY BANNER */
+  .visibility-banner { position: fixed; top: 65px; left: 0; right: 0; background: var(--danger); color: #fff; text-align: center; padding: 8px; font-family: var(--font-display); font-weight: 700; font-size: 0.85rem; z-index: 200; display: none; animation: blinkBg 1s infinite; }
+  @keyframes blinkBg { 0%,100%{opacity:1} 50%{opacity:0.7} }
+
+  /* EXT ALERT */
+  .ext-alert { position: fixed; top: 80px; right: 24px; background: var(--surface); border: 2px solid var(--danger); border-radius: 12px; padding: 20px; z-index: 700; max-width: 320px; display: none; box-shadow: 0 0 30px rgba(255,77,109,0.3); animation: extPop 0.3s ease; }
+  @keyframes extPop { from{transform:scale(0.9);opacity:0} to{transform:scale(1);opacity:1} }
+  .ext-alert h4 { font-family: var(--font-display); font-weight: 800; color: var(--danger); margin-bottom: 8px; }
+  .ext-alert p { font-size: 0.78rem; color: var(--muted); margin-bottom: 16px; line-height: 1.5; }
+  .ext-alert .domain-badge { background: rgba(255,77,109,0.15); border-radius: 6px; color: var(--danger); font-size: 0.8rem; font-weight: 700; padding: 6px 12px; margin-bottom: 14px; display: inline-block; }
+  .ext-alert .time-lost { font-family: var(--font-display); font-size: 1.4rem; font-weight: 800; color: var(--danger); }
+
+  /* PSYCH QUESTIONS OVERLAY */
+  #psych-overlay .alert-box { max-width: 500px; text-align: left; }
+  .psych-q { background: var(--surface2); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; font-size: 0.85rem; line-height: 1.6; border-left: 3px solid var(--warn); cursor: pointer; transition: all 0.2s; }
+  .psych-q:hover { border-left-color: var(--accent); background: rgba(0,229,255,0.05); }
+  .psych-q.answered { border-left-color: var(--accent3); opacity: 0.7; }
+  .psych-q p { color: var(--text); }
+  .psych-q .your-ans { color: var(--accent3); font-size: 0.78rem; margin-top: 8px; }
+  .psych-textarea { margin-top: 8px; }
+
+  /* REPORT */
+  #report { min-height: 100vh; padding: 40px 24px; max-width: 800px; margin: 0 auto; }
+  .report-header { text-align: center; margin-bottom: 40px; }
+  .report-header h1 { font-family: var(--font-display); font-size: 2rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+  .report-header p { color: var(--muted); font-size: 0.8rem; }
+  .report-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+  @media (max-width:600px) { .report-grid { grid-template-columns: 1fr 1fr; } }
+  .report-stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; text-align: center; }
+  .report-stat .big { font-family: var(--font-display); font-size: 2rem; font-weight: 800; margin-bottom: 4px; }
+  .report-stat .lbl { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .report-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+  .report-section h3 { font-family: var(--font-display); font-size: 0.8rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .qa-item { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .qa-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .qa-item .q { font-size: 0.78rem; color: var(--muted); margin-bottom: 6px; }
+  .qa-item .a { font-size: 0.85rem; color: var(--text); line-height: 1.5; }
+  .score-bar-wrap { margin-bottom: 12px; }
+  .score-bar-label { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 6px; }
+  .score-bar-label span { color: var(--muted); }
+  .score-bar-label strong { color: var(--text); }
+  .score-track { background: var(--surface2); border-radius: 4px; height: 8px; }
+  .score-fill { border-radius: 4px; height: 100%; transition: width 1s ease; }
+  .export-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn-export-big { flex: 1; min-width: 140px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); cursor: pointer; font-family: var(--font-mono); font-size: 0.85rem; padding: 14px 20px; transition: all 0.2s; text-align: center; }
+  .btn-export-big:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-export-big.json:hover { border-color: var(--accent3); color: var(--accent3); }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ==================== SETUP ==================== -->
+<div id="setup" class="screen active">
+  <div class="logo">Dev<span>Focus</span></div>
+  <div class="tagline">Tu compañero de carrera · Diseño & Desarrollo de Software</div>
+
+  <div class="setup-card">
+    <!-- Extension status -->
+    <div class="ext-status" id="ext-status">
+      <div class="ext-dot disconnected" id="ext-dot"></div>
+      <div class="ext-status-text">
+        <strong id="ext-status-label">Extensión no detectada</strong>
+        <span id="ext-status-sub">Instala DevFocus Guard para monitoreo de pestañas</span>
+      </div>
+      <button class="btn-secondary" onclick="checkExtension()" style="white-space:nowrap;font-size:0.7rem">Verificar</button>
+    </div>
+
+    <div class="setup-tabs">
+      <button class="setup-tab active" onclick="showTab('tab-session')">📋 Sesión</button>
+      <button class="setup-tab" onclick="showTab('tab-urls')">🌐 URLs</button>
+      <button class="setup-tab" onclick="showTab('tab-technique')">⏱ Técnica</button>
+    </div>
+
+    <!-- TAB: SESSION -->
+    <div class="setup-panel active" id="tab-session">
+      <div class="setup-step">
+        <div class="step-label">01 — Tu identidad</div>
+        <h3>¿Cómo te llamas?</h3>
+        <input type="text" id="student-name" placeholder="Tu nombre o alias de dev..." maxlength="40">
+      </div>
+      <div class="setup-step">
+        <div class="step-label">02 — El tema de hoy</div>
+        <h3>¿Qué curso o tema vas a estudiar?</h3>
+        <input type="text" id="course-name" placeholder="Ej: Algoritmos y Estructuras de Datos..." maxlength="80">
+      </div>
+      <div class="setup-step">
+        <div class="step-label">03 — Objetivo mínimo obligatorio</div>
+        <h3>¿Qué debes entender al final de esta sesión?</h3>
+        <textarea id="session-objective" placeholder="Sin objetivo no hay foco. Define uno ahora..."></textarea>
+        <div class="motivation-tag">⚡ Sin objetivo no hay dirección. Escríbelo aunque sea uno.</div>
+      </div>
+      <div class="setup-step">
+        <div class="step-label">04 — Duración</div>
+        <h3>¿Cuánto tiempo tienes hoy?</h3>
+        <div class="duration-row">
+          <input type="range" id="session-duration" min="30" max="300" value="120" step="15">
+          <div class="duration-val"><span id="duration-display">2h 00m</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: URLs -->
+    <div class="setup-panel" id="tab-urls">
+      <div class="setup-step">
+        <div class="step-label">Páginas de estudio permitidas</div>
+        <h3>¿En qué sitios debes estar hoy?</h3>
+        <p class="hint-text" style="margin-bottom:10px">Agrega los sitios donde SÍ debes estar. La extensión sabrá que estás trabajando.</p>
+        <div class="url-list-wrap" id="allowed-list">
+          <span class="url-tag allowed" data-url="docs.google.com">docs.google.com <span class="remove">✕</span></span>
+          <span class="url-tag allowed" data-url="github.com">github.com <span class="remove">✕</span></span>
+          <span class="url-tag allowed" data-url="stackoverflow.com">stackoverflow.com <span class="remove">✕</span></span>
+          <span class="url-tag allowed" data-url="developer.mozilla.org">developer.mozilla.org <span class="remove">✕</span></span>
+        </div>
+        <div class="url-input-row">
+          <input type="text" id="allowed-input" placeholder="ej: docs.python.org" onkeypress="if(event.key==='Enter')addUrl('allowed')">
+          <button class="btn-add" onclick="addUrl('allowed')">+ Agregar</button>
+        </div>
+      </div>
+      <div class="setup-step">
+        <div class="step-label">Sitios de distracción bloqueados</div>
+        <h3>¿De qué sitios debes alejarte?</h3>
+        <p class="hint-text" style="margin-bottom:10px">No los bloquea, pero la extensión enviará alertas de presión si entras a ellos.</p>
+        <div class="url-list-wrap" id="blocked-list">
+          <span class="url-tag blocked" data-url="youtube.com">youtube.com <span class="remove">✕</span></span>
+          <span class="url-tag blocked" data-url="instagram.com">instagram.com <span class="remove">✕</span></span>
+          <span class="url-tag blocked" data-url="twitter.com">twitter.com <span class="remove">✕</span></span>
+          <span class="url-tag blocked" data-url="tiktok.com">tiktok.com <span class="remove">✕</span></span>
+          <span class="url-tag blocked" data-url="facebook.com">facebook.com <span class="remove">✕</span></span>
+          <span class="url-tag blocked" data-url="reddit.com">reddit.com <span class="remove">✕</span></span>
+          <span class="url-tag blocked" data-url="discord.com">discord.com <span class="remove">✕</span></span>
+          <span class="url-tag blocked" data-url="twitch.tv">twitch.tv <span class="remove">✕</span></span>
+        </div>
+        <div class="url-input-row">
+          <input type="text" id="blocked-input" placeholder="ej: netflix.com" onkeypress="if(event.key==='Enter')addUrl('blocked')">
+          <button class="btn-add danger" onclick="addUrl('blocked')">+ Agregar</button>
+        </div>
+        <p class="hint-text">💡 Requiere la extensión DevFocus Guard instalada en Chrome para funcionar.</p>
+      </div>
+    </div>
+
+    <!-- TAB: TÉCNICA -->
+    <div class="setup-panel" id="tab-technique">
+      <div class="setup-step">
+        <div class="step-label">Técnica de estudio</div>
+        <h3>¿Cómo vas a estructurar tu tiempo?</h3>
+        <div class="technique-grid">
+          <button class="tech-btn selected" data-focus="25" data-break="5" data-mode="pomodoro">
+            <span class="tech-name">🍅 Pomodoro</span>
+            <span class="tech-time">25 min enfoque · 5 min descanso</span>
+          </button>
+          <button class="tech-btn" data-focus="50" data-break="10" data-mode="bloques">
+            <span class="tech-name">🧱 Bloques largos</span>
+            <span class="tech-time">50 min enfoque · 10 min descanso</span>
+          </button>
+          <button class="tech-btn" data-focus="90" data-break="20" data-mode="ultradian">
+            <span class="tech-name">🧠 Ritmo ultradiano</span>
+            <span class="tech-time">90 min enfoque · 20 min descanso</span>
+          </button>
+          <button class="tech-btn" data-focus="0" data-break="0" data-mode="libre">
+            <span class="tech-name">⚙️ Personalizado</span>
+            <span class="tech-time">Tú defines los intervalos</span>
+          </button>
+        </div>
+        <div class="custom-time" id="custom-time-inputs">
+          <div>
+            <label>Minutos de enfoque</label>
+            <input type="number" id="custom-focus" min="5" max="180" value="30">
+          </div>
+          <div>
+            <label>Minutos de descanso</label>
+            <input type="number" id="custom-break" min="1" max="60" value="10">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="startSession()">⚡ INICIAR SESIÓN DE ESTUDIO</button>
+  </div>
+</div>
+
+<!-- ==================== MAIN APP ==================== -->
+<div id="app" class="screen">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo">Dev<span>Focus</span></div>
+      <div class="student-name-top">Sesión de <strong id="top-student-name"></strong></div>
+    </div>
+    <div style="text-align:center">
+      <div class="timer-big" id="main-timer">25:00</div>
+      <div class="timer-label" id="timer-label">ENFOQUE</div>
+    </div>
+    <div class="topbar-right">
+      <div class="distraction-counter" onclick="showDistractionDetail()">⚠️ Distracciones: <span id="distraction-count">0</span></div>
+      <div class="streak-badge">🔥 <span id="streak-count">0</span> intervalos</div>
+      <div class="ext-badge offline" id="ext-badge-top">🔌 Sin extensión</div>
+      <button class="btn-secondary" onclick="endSession()">Finalizar</button>
+    </div>
+  </div>
+
+  <div class="visibility-banner" id="vis-banner">⚠️ PERDISTE EL FOCO — VUELVE A TU SESIÓN</div>
+
+  <div class="app-body">
+    <div class="center-panel">
+
+      <!-- SESSION BANNER -->
+      <div class="session-banner">
+        <div class="session-info">
+          <h2 id="banner-course"></h2>
+          <p>Sesión iniciada · <span id="session-start-time"></span></p>
+        </div>
+        <div class="session-stats">
+          <div class="stat-block"><div class="val" id="stat-total-focus">0m</div><div class="lbl">Enfocado</div></div>
+          <div class="stat-block"><div class="val orange" id="stat-total-lost">0m</div><div class="lbl">Perdido</div></div>
+          <div class="stat-block"><div class="val green" id="stat-intervals">0</div><div class="lbl">Intervalos</div></div>
+        </div>
+      </div>
+
+      <!-- CONTROLS -->
+      <div class="timer-controls">
+        <button class="btn-control start" id="btn-start" onclick="toggleTimer()">▶ Iniciar intervalo</button>
+        <button class="btn-control break-btn" onclick="takeBreak()">☕ Descanso</button>
+        <button class="btn-control" onclick="pauseForBio()">🚽 Pausa bio</button>
+        <button class="btn-control motivate" onclick="toggleMotivation()">💊 Me siento desmotivado</button>
+        <button class="btn-control stop" onclick="endSession()">⏹ Finalizar</button>
+      </div>
+
+      <!-- PROGRESS -->
+      <div class="progress-wrap">
+        <div class="progress-header">
+          <span>Progreso de sesión</span>
+          <strong><span id="session-elapsed">0 min</span> / <span id="session-total-dur">120 min</span></strong>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="session-progress-fill" style="width:0%"></div>
+        </div>
+        <div class="pomodoro-dots" id="pomo-dots"></div>
+      </div>
+
+      <!-- OBJECTIVE -->
+      <div class="objective-card">
+        <h4>🎯 Objetivo de la sesión</h4>
+        <div class="objective-text" id="obj-display"></div>
+      </div>
+
+      <!-- MOTIVATION PANEL -->
+      <div class="motivation-panel" id="motivation-panel">
+        <div class="motiv-header">
+          <h3>🧠 ¿Qué está pasando?</h3>
+          <button class="btn-secondary" onclick="toggleMotivation()" style="padding:4px 10px;font-size:0.7rem">Cerrar ✕</button>
+        </div>
+        <div class="motiv-body">
+          <p style="font-size:0.8rem;color:var(--muted);margin-bottom:16px">Selecciona lo que sientes ahora mismo:</p>
+          <div class="motiv-options" id="motiv-options"></div>
+          <div class="motiv-response" id="motiv-response"></div>
+        </div>
+      </div>
+
+      <!-- QUESTION CARD -->
+      <div class="question-card" id="question-card" style="display:none">
+        <div class="q-type-badge" id="q-badge">REFLEXIÓN</div>
+        <div class="question-text" id="question-text"></div>
+        <div class="answer-area">
+          <textarea id="answer-input" placeholder="Tu respuesta..."></textarea>
+          <button class="btn-ans" onclick="submitAnswer()">Registrar →</button>
+        </div>
+        <span class="skip-link" onclick="skipQuestion()">Omitir</span>
+      </div>
+
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Monitor de sitios</div>
+        <div id="url-monitor-list">
+          <div style="color:var(--muted);font-size:0.75rem;text-align:center;padding:10px">Sin actividad detectada</div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">Tecnologías relacionadas</div>
+        <div id="tech-list"></div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">Registro de sesión</div>
+        <div class="log-entries" id="log-entries">
+          <div class="log-entry"><span class="log-time">--:--</span>Sesión lista para iniciar</div>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-title">Exportar parcial</div>
+        <div class="export-btns">
+          <button class="btn-export" onclick="exportCSV()">↓ CSV</button>
+          <button class="btn-export json" onclick="exportJSON()">↓ JSON</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== REPORT ==================== -->
+<div id="report" class="screen">
+  <div class="report-header">
+    <h1>Reporte de Sesión 📊</h1>
+    <p>Sesión completada · <span id="report-date"></span></p>
+  </div>
+  <div class="report-grid">
+    <div class="report-stat"><div class="big" id="r-focus" style="color:var(--accent)">0m</div><div class="lbl">Tiempo enfocado</div></div>
+    <div class="report-stat"><div class="big" id="r-lost" style="color:var(--danger)">0m</div><div class="lbl">Tiempo perdido</div></div>
+    <div class="report-stat"><div class="big" id="r-pomos" style="color:var(--warn)">0</div><div class="lbl">Intervalos</div></div>
+    <div class="report-stat"><div class="big" id="r-distractions" style="color:var(--accent2)">0</div><div class="lbl">Distracciones</div></div>
+    <div class="report-stat"><div class="big" id="r-answers" style="color:var(--accent3)">0</div><div class="lbl">Preguntas respondidas</div></div>
+    <div class="report-stat"><div class="big" id="r-score" style="color:var(--accent)">0%</div><div class="lbl">Score de productividad</div></div>
+  </div>
+  <div class="report-section">
+    <h3>Métricas de rendimiento</h3>
+    <div class="score-bar-wrap"><div class="score-bar-label"><span>Tiempo enfocado</span><strong id="m-focus-pct">0%</strong></div><div class="score-track"><div class="score-fill" id="sf-focus" style="width:0%;background:var(--accent)"></div></div></div>
+    <div class="score-bar-wrap"><div class="score-bar-label"><span>Participación reflexiva</span><strong id="m-ans-pct">0%</strong></div><div class="score-track"><div class="score-fill" id="sf-ans" style="width:0%;background:var(--accent3)"></div></div></div>
+    <div class="score-bar-wrap"><div class="score-bar-label"><span>Control de distracciones</span><strong id="m-dist-pct">0%</strong></div><div class="score-track"><div class="score-fill" id="sf-dist" style="width:0%;background:var(--accent2)"></div></div></div>
+  </div>
+  <div class="report-section" id="distraction-sites-report" style="display:none">
+    <h3>Tiempo en sitios distractores</h3>
+    <div id="distraction-sites-list"></div>
+  </div>
+  <div class="report-section">
+    <h3>Tus respuestas y reflexiones</h3>
+    <div id="qa-list"></div>
+  </div>
+  <div class="report-section">
+    <h3>Registro completo</h3>
+    <div id="full-log" style="font-size:0.75rem;line-height:1.8;color:var(--muted);"></div>
+  </div>
+  <div class="report-section">
+    <h3>Exportar reporte</h3>
+    <div class="export-row">
+      <button class="btn-export-big" onclick="exportCSV()">⬇ Descargar CSV</button>
+      <button class="btn-export-big json" onclick="exportJSON()">⬇ Descargar JSON</button>
+    </div>
+    <button class="btn-primary" onclick="newSession()" style="margin-top:16px">+ Nueva sesión</button>
+  </div>
+</div>
+
+<!-- OVERLAYS -->
+<div class="overlay" id="break-overlay">
+  <div class="alert-box">
+    <div class="alert-icon">☕</div>
+    <h2 class="alert-green">¡Intervalo completado!</h2>
+    <p id="break-message"></p>
+    <p style="margin-bottom:16px"><strong class="alert-green" id="break-timer-display">05:00</strong></p>
+    <button class="btn-primary" onclick="startFocusAfterBreak()" style="background:var(--accent3);margin-bottom:10px">▶ Continuar</button><br>
+    <button class="btn-secondary" onclick="endSession()">Finalizar sesión</button>
+  </div>
+</div>
+
+<div class="overlay" id="focus-alert">
+  <div class="alert-box">
+    <div class="alert-icon" id="focus-icon">⚠️</div>
+    <h2 id="focus-title" class="alert-warn">¡Atención!</h2>
+    <p id="focus-message"></p>
+    <button class="btn-primary" onclick="closeFocusAlert()" style="background:var(--accent2)">Volver al foco →</button>
+  </div>
+</div>
+
+<div class="overlay" id="bio-overlay">
+  <div class="alert-box">
+    <div class="alert-icon">🚶</div>
+    <h2>Pausa biológica</h2>
+    <p>Ve al baño, toma agua, come algo.<br>El temporizador está pausado.<br><br>Cuando vuelvas, continúa donde dejaste.</p>
+    <button class="btn-primary" onclick="closeBio()">✓ Estoy de vuelta</button>
+  </div>
+</div>
+
+<!-- EXT DISTRACTION ALERT -->
+<div class="ext-alert" id="ext-distraction-alert">
+  <h4>🚨 Distracción detectada</h4>
+  <div class="domain-badge" id="ext-alert-domain">youtube.com</div>
+  <p id="ext-alert-msg">Estás en un sitio fuera de tu lista de estudio. Tu sesión sigue corriendo.</p>
+  <div style="display:flex;gap:8px">
+    <button class="btn-primary" onclick="closeExtAlert()" style="padding:10px 16px;font-size:0.8rem">Volver al foco →</button>
+    <button class="btn-secondary" onclick="closeExtAlert()" style="padding:10px 12px">Ignorar</button>
+  </div>
+</div>
+
+<div class="distraction-overlay" id="distraction-notif">
+  <h4>⚠️ ¡Te fuiste de la app!</h4>
+  <p id="distraction-msg">Detectamos que cambiaste de ventana.</p>
+  <button class="btn-control" onclick="closeDistractionNotif()" style="background:rgba(255,77,109,0.15);border-color:var(--danger);color:var(--danger)">Volver al foco</button>
+</div>
+
+<div class="toast" id="motivational-toast"></div>
+
+<script>
+// ==================== STATE ====================
+const S = {
+  student:'', course:'', objective:'',
+  sessionDurationMin:120, focusMin:25, breakMin:5, mode:'pomodoro',
+  timerInterval:null, currentSeconds:0, isRunning:false, isBio:false, isBreak:false,
+  sessionStartTime:null, totalFocusSeconds:0, totalLostSeconds:0, intervals:0, distractions:0,
+  lostStart:null, breakCountdownInterval:null, breakSeconds:0,
+  answers:[], log:[], currentQuestion:null,
+  questionQueue:[], questionIndex:0, questionsAnswered:0,
+  sessionElapsedSeconds:0, sessionProgressInterval:null,
+  allowedSites:[], blockedSites:[],
+  extensionConnected:false,
+  tabTimers:{}, // domain -> seconds
+  motivHistory:[],
+};
+
+// ==================== QUESTIONS ====================
+const QUESTIONS = {
+  tech:[
+    {text:"¿Qué IA (Copilot, ChatGPT, Tabnine) podría automatizar lo que estás aprendiendo hoy?",type:'tech',badge:'TECNOLOGÍA HOY'},
+    {text:"Si construyes una app con esto, ¿qué tan segura sería? ¿Qué vulnerabilidad tendría según OWASP?",type:'tech',badge:'SEGURIDAD'},
+    {text:"¿Cómo aplica este concepto en frameworks modernos como React, Node.js o Django?",type:'tech',badge:'TECNOLOGÍA HOY'},
+    {text:"¿Qué herramienta de DevOps (Docker, CI/CD, GitHub Actions) impacta este proceso?",type:'tech',badge:'DEVOPS'},
+    {text:"¿Este código escalaría con miles de usuarios? ¿Qué cambiarías para hacerlo cloud-native?",type:'tech',badge:'ESCALABILIDAD'},
+    {text:"¿Cómo testearías esto con Jest, PyTest o Cypress en un pipeline real?",type:'tech',badge:'TESTING'},
+    {text:"¿Qué patrón de diseño (MVC, Observer, Factory) aplica aquí y por qué?",type:'tech',badge:'ARQUITECTURA'},
+  ],
+  reflection:[
+    {text:"¿Para qué proyecto personal o profesional te sirve lo que aprendes hoy?",type:'reflection',badge:'REFLEXIÓN'},
+    {text:"¿Qué parte de este tema NO olvidarás mañana? ¿Por qué?",type:'reflection',badge:'REFLEXIÓN'},
+    {text:"¿Qué duda tienes que debes resolver antes de terminar la sesión?",type:'reflection',badge:'REFLEXIÓN'},
+    {text:"¿En qué tipo de empresa o startup usarías esto en tu primer trabajo?",type:'reflection',badge:'CARRERA'},
+  ],
+  fun:[
+    {text:"¿Qué superpoder de dev te daría dominar completamente este tema?",type:'fun',badge:'PREGUNTA CAPCIOSA'},
+    {text:"Si esto fuera un videojuego, ¿cuál sería el 'boss final' de este concepto?",type:'fun',badge:'PREGUNTA CAPCIOSA'},
+    {text:"¿Este conocimiento te hace más peligroso como dev o más responsable?",type:'fun',badge:'PREGUNTA CAPCIOSA'},
+    {text:"¿Un dev senior te contrataría si supiera que sabes esto pero no lo puedes explicar en 2 minutos?",type:'fun',badge:'PREGUNTA CAPCIOSA'},
+  ],
+  commitment:[
+    {text:"¿Estás realmente entendiendo o solo leyendo sin procesar?",type:'commitment',badge:'COMPROMISO'},
+    {text:"¿Qué pasa si NO aprendes esto hoy? ¿Qué proyectos no podrías hacer?",type:'commitment',badge:'COMPROMISO'},
+    {text:"¿Cuánto tiempo más dedicarás a esto después de esta sesión?",type:'commitment',badge:'COMPROMISO'},
+  ]
+};
+
+// ==================== MOTIVATION ====================
+const MOTIV_OPTIONS = [
+  {
+    label:"😴 Tengo sueño / estoy cansado",
+    response:`**Cansancio real vs. resistencia mental.**\n\nSi dormiste menos de 6 horas: toma un descanso de 10-15 min (técnica de nap estratégico). Si dormiste bien: es resistencia, no cansancio.\n\n🔑 Técnica: Páralo todo. Cierra los ojos 2 minutos. Respira. Luego abre una sola línea de código o un solo concepto. Solo uno. El cerebro arranca cuando ve algo pequeño.\n\n💡 Los devs senior también se "cansan" — la diferencia es que empiezan de todos modos.`
+  },
+  {
+    label:"😤 No entiendo nada de lo que estoy estudiando",
+    response:`**No entender = oportunidad de crecimiento real.**\n\nEsto es normal en diseño y desarrollo de software. El 90% de devs senior también "no entendieron" la primera vez.\n\n🔑 Técnica Feynman: Escribe en papel qué SÍ entiendes (aunque sea poco). Luego pregúntate "¿por qué no entiendo X?" — esa pregunta específica es tu siguiente paso.\n\n💡 No busques entender todo. Busca entender UNA cosa más que hace 10 minutos.`
+  },
+  {
+    label:"📱 Quiero revisar el teléfono / redes sociales",
+    response:`**Tu cerebro busca dopamina fácil.**\n\nEsto es una respuesta automática al aburrimiento o dificultad — no debilidad, neurología básica.\n\n🔑 Técnica: Escribe en papel lo que querías revisar. "Quería ver Instagram". Ya lo escribiste, ya lo procesaste. Ahora el cerebro siente que "ya lo hizo".\n\nEl teléfono puede esperar 20 minutos. Lo que aprendes hoy no puede esperar. Pon el teléfono boca abajo y configura el temporizador ahora mismo.`
+  },
+  {
+    label:"🤔 No sé por qué estoy estudiando esto",
+    response:`**Sin propósito, no hay motivación. Eso es real.**\n\nPero ojo: estás en una carrera de Diseño y Desarrollo de Software. Todo lo que estudias hoy tiene aplicación directa.\n\n🔑 Ejercicio: Completa esta frase ahora mismo:\n"Esto me sirve para _____ cuando trabaje en _____"\n\nSi no puedes completarla, pregúntasela a tu docente o busca en LinkedIn cómo usan este tema en roles de dev. Verás que sí tiene sentido.\n\n💡 La motivación no llega antes de actuar. Llega durante.`
+  },
+  {
+    label:"🌀 Me distraje y no sé cómo volver al foco",
+    response:`**El re-enfoque es una habilidad, no magia.**\n\n🔑 Protocolo de 3 pasos:\n1. Lee en voz alta (susurrada) tu objetivo de sesión\n2. Abre solo UNA pestaña: la que necesitas\n3. Escribe UNA línea de lo que ibas a hacer\n\nNo intentes "concentrarte" de golpe — es como intentar correr a máxima velocidad sin calentar.\n\n💡 Vuelve al temporizador. Reinícialo. Un intervalo nuevo = borrón y cuenta nueva.`
+  },
+  {
+    label:"😔 Siento que no avanzo / pierdo el tiempo",
+    response:`**Esa sensación es normal. No es realidad.**\n\nEstar aquí, con esta herramienta abierta, ya ES avanzar. El progreso en desarrollo de software es invisible hasta que de repente... click. Todo tiene sentido.\n\n🔑 Ejercicio: Abre tu carpeta del curso. Mira todo lo que ya tienes. Los archivos, los apuntes. ESO lo hiciste tú.\n\n💡 Los devs más productivos no son los que nunca dudan — son los que actúan A PESAR de dudar. Tú ya estás aquí. Eso ya es la mitad.`
+  },
+  {
+    label:"🎵 Quiero cambiar mi música",
+    response:`**Cambiar música rompe el flujo más que el silencio.**\n\nCada vez que cambias de canción, tu cerebro pierde el hilo que tenía. Es como reiniciar un servidor en medio de un deploy.\n\n🔑 Opciones rápidas:\n• lofi.cafe o rain.today — infinitas, sin cambiar\n• Playlist de 90 min fija en Spotify y NO la toques\n• Silencio total con tapones — subestimado y poderoso\n\nRegla de sesión: Configura tu música AHORA, antes de iniciar el intervalo. Después, no la tocas hasta el descanso.`
+  },
+  {
+    label:"💥 Siento que no sirvo para esto",
+    response:`**Eso que sientes tiene nombre: síndrome del impostor.**\n\nEl 70% de devs — incluyendo seniors en Google, Meta, Amazon — lo reportan. No eres la excepción, eres la norma.\n\n🔑 Dato real: Nadie "sirve" para programar de forma innata. Es práctica deliberada. Punto.\n\nMira tu repositorio, tus tareas entregadas, tus commits. Eso lo construiste tú. Con trabajo.\n\n💡 Un dev que dice "no entiendo esto" y lo estudia de todos modos es mejor dev que uno que nunca lo intenta. Tú ya elegiste intentarlo.`
+  }
+];
+
+const MOTIVATIONAL = [
+  "🔥 ¡Cada minuto invertido hoy es código mañana!",
+  "⚡ Los mejores devs no nacen — se construyen en sesiones como esta.",
+  "💡 Lo que no entiendes hoy, la IA lo hará por ti mañana. ¿Quieres eso?",
+  "🚀 Un intervalo más y estás más cerca de tu primer pull request épico.",
+  "🧠 El cerebro consolida mientras descansas. ¡Estás aprendiendo incluso ahora!",
+  "📦 Cada concepto que dominas es una dependencia menos que te da miedo.",
+  "🎯 Los senior devs también empezaron sin saber esto. La diferencia: no pararon.",
+];
+
+const DISTRACTION_MSGS = [
+  "¿Cambiaste de música? Configúrala ahora y no la toques más.",
+  "¿Revisaste el teléfono? El mundo puede esperar 25 minutos.",
+  "Cambiar de ventana rompe tu flujo. Los mejores devs cultivan el foco.",
+  "¿Buscaste algo no relacionado? Guárdalo para el descanso.",
+  "Saliste de DevFocus. Tu carrera no se pausa cuando tú lo haces.",
+];
+
+const TECH_RELATIONS = [
+  {name:"GitHub Copilot / IA generativa", desc:"Puede generar código de este tipo. Entendiéndolo, sabrás cuándo el código generado está mal."},
+  {name:"Node.js / Express", desc:"Arquitectura backend que aplica estos conceptos en APIs REST del mundo real."},
+  {name:"React / Next.js", desc:"Frontend moderno que usa estos principios para gestión de estado y renderizado."},
+  {name:"Docker + CI/CD", desc:"El despliegue moderno requiere entender esto para automatizar pipelines."},
+  {name:"OWASP / Seguridad web", desc:"¿Es seguro aplicar esto en producción? OWASP define los riesgos."},
+  {name:"AWS Lambda / Serverless", desc:"Arquitectura sin servidor que usa estos patrones para escalar automáticamente."},
+  {name:"PostgreSQL / MongoDB", desc:"Bases de datos que modelan estas estructuras en producción a escala."},
+  {name:"Git / Control de versiones", desc:"Cada concepto aprendido hoy tiene commits reales en proyectos open source."},
+];
+
+// ==================== SETUP TABS ====================
+function showTab(id) {
+  document.querySelectorAll('.setup-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.setup-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+document.getElementById('session-duration').addEventListener('input', function() {
+  const v = parseInt(this.value), h = Math.floor(v/60), m = v%60;
+  document.getElementById('duration-display').textContent = h > 0 ? `${h}h ${m>0?m+'m':''}` : `${m}m`;
+});
+
+document.querySelectorAll('.tech-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tech-btn').forEach(b => b.classList.remove('selected'));
+    this.classList.add('selected');
+    S.focusMin = parseInt(this.dataset.focus);
+    S.breakMin = parseInt(this.dataset.break);
+    S.mode = this.dataset.mode;
+    document.getElementById('custom-time-inputs').classList.toggle('show', S.mode === 'libre');
+  });
+});
+
+// URL Tags
+function addUrl(type) {
+  const input = document.getElementById(`${type}-input`);
+  let val = input.value.trim().toLowerCase().replace(/https?:\/\//,'').replace(/\//,'');
+  if (!val) return;
+  const list = document.getElementById(`${type}-list`);
+  const tag = document.createElement('span');
+  tag.className = `url-tag ${type}`;
+  tag.dataset.url = val;
+  tag.innerHTML = `${val} <span class="remove">✕</span>`;
+  tag.addEventListener('click', () => tag.remove());
+  list.appendChild(tag);
+  input.value = '';
+}
+
+document.querySelectorAll('.url-tag').forEach(tag => {
+  tag.addEventListener('click', () => tag.remove());
+});
+
+// ==================== EXTENSION CHECK ====================
+function checkExtension() {
+  // Try to communicate with the extension via custom event
+  const event = new CustomEvent('devfocus-ping', { detail: { from: 'web' } });
+  document.dispatchEvent(event);
+
+  // Also try chrome.runtime if available (content script bridge)
+  try {
+    if (typeof chrome !== 'undefined' && chrome.runtime) {
+      chrome.runtime.sendMessage(undefined, { type: 'PING' }, (resp) => {
+        if (chrome.runtime.lastError) {
+          setExtStatus(false);
+        } else if (resp && resp.alive) {
+          setExtStatus(true);
+        }
+      });
+    } else {
+      setExtStatus(false);
+    }
+  } catch(e) {
+    setExtStatus(false);
+  }
+}
+
+function setExtStatus(connected) {
+  S.extensionConnected = connected;
+  const dot = document.getElementById('ext-dot');
+  const label = document.getElementById('ext-status-label');
+  const sub = document.getElementById('ext-status-sub');
+  if (connected) {
+    dot.className = 'ext-dot connected';
+    label.textContent = '✓ DevFocus Guard conectado';
+    sub.textContent = 'Monitoreo de pestañas activo';
+  } else {
+    dot.className = 'ext-dot disconnected';
+    label.textContent = 'Extensión no detectada';
+    sub.textContent = 'Instala DevFocus Guard para monitoreo de pestañas';
+  }
+}
+
+// Listen for extension messages (content script bridge)
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.source === 'devfocus-extension') {
+    handleExtensionMessage(e.data);
+  }
+});
+
+// Also listen via custom storage events (extension writes to localStorage as bridge)
+window.addEventListener('storage', (e) => {
+  if (e.key === 'devfocus-ext-event') {
+    try {
+      const data = JSON.parse(e.newValue);
+      handleExtensionMessage(data);
+    } catch(err) {}
+  }
+});
+
+function handleExtensionMessage(data) {
+  if (!S.sessionStartTime) return;
+
+  if (data.type === 'DISTRACTION') {
+    S.distractions++;
+    document.getElementById('distraction-count').textContent = S.distractions;
+
+    if (!S.tabTimers[data.domain]) S.tabTimers[data.domain] = 0;
+    const msgs = [
+      `¿Qué haces en ${data.domain}? Tu sesión sigue corriendo.`,
+      `${data.domain} detectado. ¿Vale la pena este tiempo?`,
+      `Saliste a ${data.domain}. El tiempo no se pausa.`,
+      `¿En serio ${data.domain}? Tienes un objetivo pendiente.`,
+    ];
+    const msg = msgs[Math.floor(Math.random() * msgs.length)];
+    document.getElementById('ext-alert-domain').textContent = data.domain;
+    document.getElementById('ext-alert-msg').textContent = msg;
+    document.getElementById('ext-distraction-alert').style.display = 'block';
+    addLog(`Extensión detectó: ${data.domain}`, 'distract');
+
+    setTimeout(() => {
+      document.getElementById('ext-distraction-alert').style.display = 'none';
+    }, 8000);
+  }
+
+  if (data.type === 'TIME_UPDATE') {
+    if (!S.tabTimers[data.domain]) S.tabTimers[data.domain] = 0;
+    S.tabTimers[data.domain] += data.seconds || 0;
+    S.totalLostSeconds += data.seconds || 0;
+    updateStats();
+    updateUrlMonitor();
+  }
+
+  if (data.type === 'HEARTBEAT') {
+    setExtStatus(true);
+    document.getElementById('ext-badge-top').textContent = '🟢 Guard activo';
+    document.getElementById('ext-badge-top').classList.remove('offline');
+  }
+}
+
+function closeExtAlert() {
+  document.getElementById('ext-distraction-alert').style.display = 'none';
+}
+
+function updateUrlMonitor() {
+  const list = document.getElementById('url-monitor-list');
+  const entries = Object.entries(S.tabTimers);
+  if (entries.length === 0) return;
+
+  list.innerHTML = entries
+    .sort((a,b) => b[1]-a[1])
+    .map(([domain, secs]) => {
+      const isAllowed = S.allowedSites.includes(domain);
+      const timeStr = secs < 60 ? `${secs}s` : `${Math.floor(secs/60)}m ${secs%60}s`;
+      return `<div class="url-monitor-item ${isAllowed?'allowed':''}">
+        <span class="dom">${domain}</span>
+        <span class="time">${timeStr}</span>
+      </div>`;
+    }).join('');
+}
+
+// ==================== SESSION START ====================
+function startSession() {
+  const name = document.getElementById('student-name').value.trim();
+  const course = document.getElementById('course-name').value.trim();
+  const obj = document.getElementById('session-objective').value.trim();
+  if (!name) { alert('Por favor ingresa tu nombre.'); return; }
+  if (!course) { alert('¿Qué vas a estudiar hoy?'); return; }
+  if (!obj) { alert('Define al menos un objetivo. Sin objetivo no hay foco.'); return; }
+
+  S.student = name; S.course = course; S.objective = obj;
+  S.sessionDurationMin = parseInt(document.getElementById('session-duration').value);
+
+  if (S.mode === 'libre') {
+    S.focusMin = parseInt(document.getElementById('custom-focus').value) || 30;
+    S.breakMin = parseInt(document.getElementById('custom-break').value) || 10;
+  }
+
+  // Collect URLs
+  S.allowedSites = Array.from(document.querySelectorAll('#allowed-list .url-tag')).map(t => t.dataset.url);
+  S.blockedSites = Array.from(document.querySelectorAll('#blocked-list .url-tag')).map(t => t.dataset.url);
+
+  S.sessionStartTime = new Date();
+  S.currentSeconds = S.focusMin * 60;
+
+  // Tell extension
+  notifyExtension({
+    type: 'SESSION_START',
+    allowedSites: S.allowedSites,
+    blockedSites: S.blockedSites,
+    devfocusUrl: window.location.href,
+    student: S.student,
+    course: S.course
+  });
+
+  // UI setup
+  document.getElementById('top-student-name').textContent = name;
+  document.getElementById('banner-course').textContent = course;
+  document.getElementById('session-start-time').textContent = S.sessionStartTime.toLocaleTimeString('es-PE', {hour:'2-digit',minute:'2-digit'});
+  document.getElementById('obj-display').textContent = obj;
+  document.getElementById('session-total-dur').textContent = S.sessionDurationMin + ' min';
+
+  const totalIntervals = Math.floor(S.sessionDurationMin / (S.focusMin + S.breakMin));
+  const dots = document.getElementById('pomo-dots');
+  dots.innerHTML = '';
+  for (let i = 0; i < Math.min(totalIntervals, 16); i++) {
+    const d = document.createElement('div');
+    d.className = 'pomo-dot'; d.id = `dot-${i}`;
+    dots.appendChild(d);
+  }
+  if (dots.children[0]) dots.children[0].classList.add('current');
+
+  const techList = document.getElementById('tech-list');
+  techList.innerHTML = '';
+  TECH_RELATIONS.sort(()=>Math.random()-0.5).slice(0,3).forEach(t => {
+    techList.innerHTML += `<div class="tech-item"><strong>${t.name}</strong><p>${t.desc}</p></div>`;
+  });
+
+  buildQuestionQueue();
+  setupMotivOptions();
+
+  document.getElementById('setup').classList.remove('active');
+  const app = document.getElementById('app');
+  app.classList.add('active'); app.style.display = 'flex';
+
+  updateTimerDisplay();
+  addLog(`Sesión iniciada. ¡A por ello, ${name}!`, 'default');
+  startSessionProgress();
+  setupVisibilityTracking();
+  setTimeout(() => { if (S.isRunning) showNextQuestion(); }, 3 * 60 * 1000);
+}
+
+function notifyExtension(data) {
+  // Via localStorage bridge (content script reads this)
+  try {
+    localStorage.setItem('devfocus-session', JSON.stringify({
+      ...data,
+      timestamp: Date.now()
+    }));
+  } catch(e) {}
+}
+
+// ==================== MOTIVATION PANEL ====================
+function setupMotivOptions() {
+  const container = document.getElementById('motiv-options');
+  container.innerHTML = '';
+  MOTIV_OPTIONS.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'motiv-option';
+    btn.textContent = opt.label;
+    btn.onclick = () => showMotivResponse(i);
+    container.appendChild(btn);
+  });
+}
+
+function toggleMotivation() {
+  const panel = document.getElementById('motivation-panel');
+  panel.classList.toggle('show');
+  if (panel.classList.contains('show')) {
+    document.getElementById('motiv-response').classList.remove('show');
+    addLog('Panel de motivación abierto', 'alert');
+  }
+}
+
+function showMotivResponse(idx) {
+  const resp = document.getElementById('motiv-response');
+  const opt = MOTIV_OPTIONS[idx];
+  const formatted = opt.response.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+  resp.innerHTML = formatted;
+  resp.classList.add('show');
+  S.motivHistory.push({ time: new Date().toLocaleTimeString(), issue: opt.label });
+  addLog(`Motivación: "${opt.label}"`, 'alert');
+  S.log.push({ time: new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}), message: `Motivación solicitada: ${opt.label}`, type: 'alert' });
+}
+
+// ==================== TIMER ====================
+function toggleTimer() {
+  S.isRunning ? pauseTimer() : startTimer();
+}
+
+function startTimer() {
+  if (S.isRunning) return;
+  S.isRunning = true;
+  const btn = document.getElementById('btn-start');
+  btn.textContent = '⏸ Pausar'; btn.classList.remove('start'); btn.classList.add('pause');
+  document.getElementById('timer-label').textContent = S.isBreak ? 'DESCANSO' : 'ENFOQUE';
+  document.getElementById('main-timer').className = 'timer-big' + (S.isBreak ? ' break-mode' : '');
+
+  S.timerInterval = setInterval(() => {
+    S.currentSeconds--;
+    if (!S.isBreak) S.totalFocusSeconds++;
+    S.sessionElapsedSeconds++;
+    updateTimerDisplay(); updateStats();
+    if (S.currentSeconds <= 0) {
+      clearInterval(S.timerInterval); S.isRunning = false;
+      S.isBreak ? completeBreakInterval() : completeFocusInterval();
+    }
+  }, 1000);
+  addLog(S.isBreak ? 'Descanso iniciado' : 'Intervalo de enfoque iniciado', 'default');
+}
+
+function pauseTimer() {
+  clearInterval(S.timerInterval); S.isRunning = false;
+  const btn = document.getElementById('btn-start');
+  btn.textContent = '▶ Continuar'; btn.classList.add('start'); btn.classList.remove('pause');
+  document.getElementById('main-timer').className = 'timer-big pause-mode';
+  addLog('Pausado', 'alert');
+}
+
+function completeFocusInterval() {
+  S.intervals++;
+  const dot = document.getElementById(`dot-${S.intervals-1}`);
+  if (dot) { dot.classList.remove('current'); dot.classList.add('done'); }
+  const next = document.getElementById(`dot-${S.intervals}`);
+  if (next) next.classList.add('current');
+  document.getElementById('streak-count').textContent = S.intervals;
+  showMotivational();
+  takeBreak();
+  addLog(`✅ Intervalo ${S.intervals} completado`, 'default');
+}
+
+function completeBreakInterval() {
+  S.isBreak = false; S.currentSeconds = S.focusMin * 60;
+  document.getElementById('break-overlay').classList.remove('show');
+  document.getElementById('btn-start').textContent = '▶ Iniciar intervalo';
+  document.getElementById('btn-start').className = 'btn-control start';
+  addLog('Descanso completado. ¡A trabajar!', 'default');
+  showNextQuestion();
+}
+
+function takeBreak() {
+  pauseTimer(); S.isBreak = true; S.currentSeconds = S.breakMin * 60;
+  document.getElementById('break-message').textContent =
+    `Tómate ${S.breakMin} minutos. Aléjate de la pantalla, estira las piernas, toma agua. Tu cerebro lo necesita para consolidar lo aprendido.`;
+  document.getElementById('break-timer-display').textContent = formatSeconds(S.breakMin * 60);
+  document.getElementById('break-overlay').classList.add('show');
+  S.breakSeconds = S.breakMin * 60;
+  if (S.breakCountdownInterval) clearInterval(S.breakCountdownInterval);
+  S.breakCountdownInterval = setInterval(() => {
+    S.breakSeconds--;
+    document.getElementById('break-timer-display').textContent = formatSeconds(S.breakSeconds);
+    if (S.breakSeconds <= 0) clearInterval(S.breakCountdownInterval);
+  }, 1000);
+  addLog('Pausa tomada', 'alert');
+}
+
+function startFocusAfterBreak() {
+  if (S.breakCountdownInterval) clearInterval(S.breakCountdownInterval);
+  document.getElementById('break-overlay').classList.remove('show');
+  S.isBreak = false; S.currentSeconds = S.focusMin * 60;
+  document.getElementById('btn-start').textContent = '▶ Iniciar intervalo';
+  document.getElementById('btn-start').className = 'btn-control start';
+  document.getElementById('main-timer').className = 'timer-big';
+  document.getElementById('timer-label').textContent = 'ENFOQUE';
+  updateTimerDisplay(); showNextQuestion();
+}
+
+function pauseForBio() {
+  pauseTimer(); S.isBio = true;
+  document.getElementById('bio-overlay').classList.add('show');
+  addLog('Pausa biológica', 'alert');
+}
+function closeBio() {
+  S.isBio = false;
+  document.getElementById('bio-overlay').classList.remove('show');
+  addLog('De vuelta de pausa biológica', 'default');
+}
+
+// ==================== QUESTIONS ====================
+function buildQuestionQueue() {
+  const all = [];
+  Object.values(QUESTIONS).forEach(arr => all.push(...arr));
+  S.questionQueue = all.sort(() => Math.random()-0.5);
+  S.questionIndex = 0;
+}
+
+function showNextQuestion() {
+  if (S.questionIndex >= S.questionQueue.length) {
+    S.questionIndex = 0; S.questionQueue = S.questionQueue.sort(() => Math.random()-0.5);
+  }
+  const q = S.questionQueue[S.questionIndex++];
+  S.currentQuestion = q;
+  document.getElementById('question-card').style.display = 'block';
+  document.getElementById('question-text').textContent = q.text;
+  document.getElementById('answer-input').value = '';
+  const badge = document.getElementById('q-badge');
+  badge.textContent = q.badge; badge.className = 'q-type-badge';
+  if (q.type === 'tech') badge.classList.add('tech');
+  if (q.type === 'fun') badge.classList.add('fun');
+  if (q.type === 'commitment') badge.classList.add('psych');
+}
+
+function submitAnswer() {
+  const ans = document.getElementById('answer-input').value.trim();
+  if (!ans) { alert('Escribe algo, aunque sea una idea.'); return; }
+  S.answers.push({ time: new Date().toLocaleTimeString(), question: S.currentQuestion.text, type: S.currentQuestion.type, answer: ans });
+  S.questionsAnswered++;
+  document.getElementById('answer-input').value = '';
+  document.getElementById('question-card').style.display = 'none';
+  addLog(`Respondida: "${S.currentQuestion.text.substring(0,35)}..."`, 'answer');
+  showToast('✅ Respuesta registrada. ¡Buen trabajo!');
+  setTimeout(() => { if (S.isRunning) showNextQuestion(); }, (8 + Math.floor(Math.random()*5)) * 60 * 1000);
+}
+
+function skipQuestion() {
+  document.getElementById('question-card').style.display = 'none';
+  addLog('Pregunta omitida', 'alert');
+  setTimeout(() => { if (S.isRunning) showNextQuestion(); }, 10 * 60 * 1000);
+}
+
+// ==================== VISIBILITY ====================
+function setupVisibilityTracking() {
+  document.addEventListener('visibilitychange', () => {
+    if (!S.sessionStartTime || S.isBio) return;
+    if (document.hidden) {
+      S.lostStart = Date.now(); S.distractions++;
+      document.getElementById('distraction-count').textContent = S.distractions;
+      document.getElementById('vis-banner').style.display = 'block';
+      const msg = DISTRACTION_MSGS[Math.floor(Math.random()*DISTRACTION_MSGS.length)];
+      document.getElementById('distraction-msg').textContent = msg;
+      document.getElementById('distraction-notif').style.display = 'block';
+      addLog('Salida de la app detectada', 'distract');
+    } else {
+      document.getElementById('vis-banner').style.display = 'none';
+      if (S.lostStart) {
+        const lost = Math.floor((Date.now()-S.lostStart)/1000);
+        S.totalLostSeconds += lost; S.lostStart = null;
+        addLog(`Regreso — ${lost}s fuera`, 'distract');
+        document.getElementById('focus-icon').textContent = lost > 120 ? '😤' : '👀';
+        document.getElementById('focus-title').textContent = lost > 120 ? '¡Más de 2 minutos perdidos!' : '¡Volviste!';
+        document.getElementById('focus-message').textContent = lost > 120
+          ? `Perdiste ${lost}s de tu sesión. El tiempo no vuelve.`
+          : `${lost}s fuera del foco. Recupera el ritmo.`;
+        document.getElementById('focus-alert').classList.add('show');
+        updateStats();
+      }
+    }
+  });
+}
+
+function showDistractionDetail() {
+  if (Object.keys(S.tabTimers).length > 0) {
+    const info = Object.entries(S.tabTimers)
+      .map(([d,s]) => `${d}: ${s<60?s+'s':Math.floor(s/60)+'m '+s%60+'s'}`)
+      .join('\n');
+    alert(`Tiempo en sitios distractores:\n\n${info}`);
+  } else {
+    showToast('🎯 Sin distracciones externas registradas. ¡Bien hecho!');
+  }
+}
+
+function closeDistractionNotif() { document.getElementById('distraction-notif').style.display = 'none'; }
+function closeFocusAlert() { document.getElementById('focus-alert').classList.remove('show'); }
+
+// ==================== PROGRESS ====================
+function startSessionProgress() {
+  S.sessionProgressInterval = setInterval(() => {
+    if (!S.isBio) S.sessionElapsedSeconds++;
+    const pct = Math.min((S.sessionElapsedSeconds/(S.sessionDurationMin*60))*100, 100);
+    document.getElementById('session-progress-fill').style.width = pct+'%';
+    document.getElementById('session-elapsed').textContent = Math.floor(S.sessionElapsedSeconds/60)+' min';
+    if (S.sessionElapsedSeconds >= S.sessionDurationMin*60) {
+      clearInterval(S.sessionProgressInterval); endSession();
+    }
+  }, 1000);
+}
+
+function updateStats() {
+  document.getElementById('stat-total-focus').textContent = Math.floor(S.totalFocusSeconds/60)+'m';
+  document.getElementById('stat-total-lost').textContent = Math.floor(S.totalLostSeconds/60)+'m';
+  document.getElementById('stat-intervals').textContent = S.intervals;
+}
+
+// ==================== END SESSION ====================
+function endSession() {
+  [S.timerInterval, S.sessionProgressInterval, S.breakCountdownInterval].forEach(i => { if(i) clearInterval(i); });
+  S.isRunning = false;
+  ['break-overlay','focus-alert','bio-overlay'].forEach(id => document.getElementById(id).classList.remove('show'));
+  notifyExtension({ type: 'SESSION_END' });
+  buildReport();
+  document.getElementById('app').classList.remove('active'); document.getElementById('app').style.display = 'none';
+  document.getElementById('report').classList.add('active');
+}
+
+function buildReport() {
+  const totalMin = Math.floor(S.sessionElapsedSeconds/60);
+  const focusMin = Math.floor(S.totalFocusSeconds/60);
+  const lostMin = Math.floor(S.totalLostSeconds/60);
+  const focusPct = totalMin > 0 ? Math.round((focusMin/totalMin)*100) : 0;
+  const ansPct = Math.round((S.questionsAnswered/Math.max(S.questionIndex,1))*100);
+  const distPct = Math.max(0, 100-(S.distractions*10));
+  const score = Math.round(focusPct*0.5 + ansPct*0.3 + distPct*0.2);
+
+  document.getElementById('report-date').textContent = new Date().toLocaleString('es-PE');
+  document.getElementById('r-focus').textContent = focusMin+'m';
+  document.getElementById('r-lost').textContent = lostMin+'m';
+  document.getElementById('r-pomos').textContent = S.intervals;
+  document.getElementById('r-distractions').textContent = S.distractions;
+  document.getElementById('r-answers').textContent = S.questionsAnswered;
+  document.getElementById('r-score').textContent = score+'%';
+  document.getElementById('m-focus-pct').textContent = focusPct+'%';
+  document.getElementById('m-ans-pct').textContent = ansPct+'%';
+  document.getElementById('m-dist-pct').textContent = distPct+'%';
+
+  setTimeout(() => {
+    document.getElementById('sf-focus').style.width = focusPct+'%';
+    document.getElementById('sf-ans').style.width = ansPct+'%';
+    document.getElementById('sf-dist').style.width = distPct+'%';
+  }, 200);
+
+  // Distraction sites
+  const tabEntries = Object.entries(S.tabTimers);
+  if (tabEntries.length > 0) {
+    document.getElementById('distraction-sites-report').style.display = 'block';
+    document.getElementById('distraction-sites-list').innerHTML = tabEntries
+      .sort((a,b)=>b[1]-a[1])
+      .map(([d,s])=>`<div class="qa-item"><div class="q">${d}</div><div class="a" style="color:var(--danger)">${s<60?s+'s':Math.floor(s/60)+'m '+s%60+'s'} en este sitio durante la sesión</div></div>`)
+      .join('');
+  }
+
+  // Q&A
+  const qaList = document.getElementById('qa-list');
+  if (S.answers.length === 0) {
+    qaList.innerHTML = '<p style="color:var(--muted);font-size:0.8rem">No respondiste preguntas durante esta sesión.</p>';
+  } else {
+    qaList.innerHTML = S.answers.map(a=>`<div class="qa-item"><div class="q">[${a.time}] ${a.question}</div><div class="a">${a.answer}</div></div>`).join('');
+  }
+
+  document.getElementById('full-log').innerHTML = S.log.map(l=>
+    `<span style="color:var(--accent)">${l.time}</span> — ${l.message}<br>`
+  ).join('');
+}
+
+// ==================== EXPORT ====================
+function getSessionData() {
+  return {
+    student: S.student, course: S.course, objective: S.objective,
+    date: new Date().toISOString(), technique: S.mode,
+    focusMinutes: Math.floor(S.totalFocusSeconds/60),
+    lostMinutes: Math.floor(S.totalLostSeconds/60),
+    intervals: S.intervals, distractions: S.distractions,
+    questionsAnswered: S.questionsAnswered,
+    allowedSites: S.allowedSites, blockedSites: S.blockedSites,
+    tabTimers: S.tabTimers, motivHistory: S.motivHistory,
+    answers: S.answers, log: S.log,
+  };
+}
+
+function exportCSV() {
+  const d = getSessionData();
+  let csv = 'Campo,Valor\n';
+  csv += `Estudiante,${d.student}\nCurso,${d.course}\n`;
+  csv += `Objetivo,"${d.objective}"\nFecha,${d.date}\nTécnica,${d.technique}\n`;
+  csv += `Minutos enfocado,${d.focusMinutes}\nMinutos perdidos,${d.lostMinutes}\n`;
+  csv += `Intervalos,${d.intervals}\nDistracciones,${d.distractions}\n`;
+  csv += `Preguntas respondidas,${d.questionsAnswered}\n\n`;
+  if (Object.keys(d.tabTimers).length > 0) {
+    csv += 'SITIO,SEGUNDOS EN DISTRACCION\n';
+    Object.entries(d.tabTimers).forEach(([k,v]) => { csv += `${k},${v}\n`; });
+    csv += '\n';
+  }
+  csv += 'HORA,PREGUNTA,TIPO,RESPUESTA\n';
+  d.answers.forEach(a => { csv += `${a.time},"${a.question}",${a.type},"${a.answer.replace(/"/g,'""')}"\n`; });
+  downloadFile(csv, `devfocus-${d.student}-${new Date().toLocaleDateString('es-PE').replace(/\//g,'-')}.csv`, 'text/csv');
+}
+
+function exportJSON() {
+  downloadFile(JSON.stringify(getSessionData(), null, 2), `devfocus-${S.student}-${Date.now()}.json`, 'application/json');
+}
+
+function downloadFile(content, filename, type) {
+  const blob = new Blob([content], {type});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+// ==================== UTILS ====================
+function updateTimerDisplay() { document.getElementById('main-timer').textContent = formatSeconds(S.currentSeconds); }
+function formatSeconds(s) { return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
+
+function addLog(message, type) {
+  const time = new Date().toLocaleTimeString('es-PE', {hour:'2-digit',minute:'2-digit'});
+  S.log.push({time, message, type});
+  const el = document.createElement('div');
+  el.className = `log-entry ${type}`;
+  el.innerHTML = `<span class="log-time">${time}</span>${message}`;
+  const c = document.getElementById('log-entries');
+  c.insertBefore(el, c.firstChild);
+  if (c.children.length > 40) c.removeChild(c.lastChild);
+}
+
+function showMotivational() {
+  showToast(MOTIVATIONAL[Math.floor(Math.random()*MOTIVATIONAL.length)]);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('motivational-toast');
+  t.textContent = msg; t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 4500);
+}
+
+function newSession() {
+  Object.assign(S, {
+    student:'', course:'', objective:'', timerInterval:null, currentSeconds:0,
+    isRunning:false, isBio:false, isBreak:false, sessionStartTime:null,
+    totalFocusSeconds:0, totalLostSeconds:0, intervals:0, distractions:0,
+    lostStart:null, breakSeconds:0, answers:[], log:[], currentQuestion:null,
+    questionQueue:[], questionIndex:0, questionsAnswered:0, sessionElapsedSeconds:0,
+    allowedSites:[], blockedSites:[], tabTimers:{}, motivHistory:[]
+  });
+  document.getElementById('report').classList.remove('active');
+  document.getElementById('setup').classList.add('active');
+  ['student-name','course-name','session-objective'].forEach(id => { document.getElementById(id).value = ''; });
+}
+
+// Check extension on load
+setTimeout(checkExtension, 1000);
+</script>
+</body>
+</html>
