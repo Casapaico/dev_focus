@@ -816,27 +816,58 @@ document.querySelectorAll('.url-tag').forEach(tag => {
 });
 
 // ==================== EXTENSION CHECK ====================
-function checkExtension() {
-  // Try to communicate with the extension via custom event
-  const event = new CustomEvent('devfocus-ping', { detail: { from: 'web' } });
-  document.dispatchEvent(event);
+// ==================== EXTENSION BRIDGE (postMessage) ====================
+// content.js se inyecta en esta página y actúa como puente
+// Web → postMessage → content.js → chrome.runtime → background.js
 
-  // Also try chrome.runtime if available (content script bridge)
-  try {
-    if (typeof chrome !== 'undefined' && chrome.runtime) {
-      chrome.runtime.sendMessage(undefined, { type: 'PING' }, (resp) => {
-        if (chrome.runtime.lastError) {
-          setExtStatus(false);
-        } else if (resp && resp.alive) {
-          setExtStatus(true);
-        }
-      });
-    } else {
-      setExtStatus(false);
-    }
-  } catch(e) {
-    setExtStatus(false);
+function sendToExtension(data) {
+  window.postMessage({ source: 'devfocus-web', ...data }, '*');
+}
+
+// Escuchar mensajes de la extensión (vienen via content.js → postMessage)
+window.addEventListener('message', (e) => {
+  if (!e.data || e.data.source !== 'devfocus-ext') return;
+  const msg = e.data;
+
+  // Extensión presente
+  if (msg.type === 'EXT_READY' || msg.alive) {
+    setExtStatus(true);
   }
+
+  // Distracción detectada en otra pestaña
+  if (msg.type === 'DISTRACTION' && S.sessionStartTime) {
+    S.distractions++;
+    document.getElementById('distraction-count').textContent = S.distractions;
+    const msgs = [
+      `¿Qué haces en ${msg.domain}? Tu sesión sigue corriendo.`,
+      `${msg.domain} detectado. ¿Vale la pena este tiempo?`,
+      `Saliste a ${msg.domain}. El tiempo no se pausa.`,
+      `¿En serio ${msg.domain}? Tienes un objetivo pendiente.`,
+    ];
+    document.getElementById('ext-alert-domain').textContent = msg.domain;
+    document.getElementById('ext-alert-msg').textContent = msgs[Math.floor(Math.random()*msgs.length)];
+    document.getElementById('ext-distraction-alert').style.display = 'block';
+    addLog(`Extensión detectó: ${msg.domain}`, 'distract');
+    setTimeout(() => { document.getElementById('ext-distraction-alert').style.display = 'none'; }, 8000);
+  }
+
+  // Tiempo en sitio distracto
+  if (msg.type === 'TIME_UPDATE' && S.sessionStartTime) {
+    if (!S.tabTimers[msg.domain]) S.tabTimers[msg.domain] = 0;
+    S.tabTimers[msg.domain] += msg.seconds || 0;
+    S.totalLostSeconds += msg.seconds || 0;
+    updateStats();
+    updateUrlMonitor();
+  }
+});
+
+function checkExtension() {
+  // Enviar ping — content.js responderá con EXT_READY si está instalada
+  sendToExtension({ type: 'PING' });
+  // Si en 2s no responde, marcar como desconectada
+  setTimeout(() => {
+    if (!S.extensionConnected) setExtStatus(false);
+  }, 2000);
 }
 
 function setExtStatus(connected) {
@@ -844,72 +875,22 @@ function setExtStatus(connected) {
   const dot = document.getElementById('ext-dot');
   const label = document.getElementById('ext-status-label');
   const sub = document.getElementById('ext-status-sub');
+  const badge = document.getElementById('ext-badge-top');
   if (connected) {
     dot.className = 'ext-dot connected';
     label.textContent = '✓ DevFocus Guard conectado';
     sub.textContent = 'Monitoreo de pestañas activo';
+    if (badge) { badge.textContent = '🟢 Guard activo'; badge.classList.remove('offline'); }
   } else {
     dot.className = 'ext-dot disconnected';
     label.textContent = 'Extensión no detectada';
     sub.textContent = 'Instala DevFocus Guard para monitoreo de pestañas';
+    if (badge) { badge.textContent = '🔌 Sin extensión'; badge.classList.add('offline'); }
   }
 }
 
-// Listen for extension messages (content script bridge)
-window.addEventListener('message', (e) => {
-  if (e.data && e.data.source === 'devfocus-extension') {
-    handleExtensionMessage(e.data);
-  }
-});
-
-// Also listen via custom storage events (extension writes to localStorage as bridge)
-window.addEventListener('storage', (e) => {
-  if (e.key === 'devfocus-ext-event') {
-    try {
-      const data = JSON.parse(e.newValue);
-      handleExtensionMessage(data);
-    } catch(err) {}
-  }
-});
-
-function handleExtensionMessage(data) {
-  if (!S.sessionStartTime) return;
-
-  if (data.type === 'DISTRACTION') {
-    S.distractions++;
-    document.getElementById('distraction-count').textContent = S.distractions;
-
-    if (!S.tabTimers[data.domain]) S.tabTimers[data.domain] = 0;
-    const msgs = [
-      `¿Qué haces en ${data.domain}? Tu sesión sigue corriendo.`,
-      `${data.domain} detectado. ¿Vale la pena este tiempo?`,
-      `Saliste a ${data.domain}. El tiempo no se pausa.`,
-      `¿En serio ${data.domain}? Tienes un objetivo pendiente.`,
-    ];
-    const msg = msgs[Math.floor(Math.random() * msgs.length)];
-    document.getElementById('ext-alert-domain').textContent = data.domain;
-    document.getElementById('ext-alert-msg').textContent = msg;
-    document.getElementById('ext-distraction-alert').style.display = 'block';
-    addLog(`Extensión detectó: ${data.domain}`, 'distract');
-
-    setTimeout(() => {
-      document.getElementById('ext-distraction-alert').style.display = 'none';
-    }, 8000);
-  }
-
-  if (data.type === 'TIME_UPDATE') {
-    if (!S.tabTimers[data.domain]) S.tabTimers[data.domain] = 0;
-    S.tabTimers[data.domain] += data.seconds || 0;
-    S.totalLostSeconds += data.seconds || 0;
-    updateStats();
-    updateUrlMonitor();
-  }
-
-  if (data.type === 'HEARTBEAT') {
-    setExtStatus(true);
-    document.getElementById('ext-badge-top').textContent = '🟢 Guard activo';
-    document.getElementById('ext-badge-top').classList.remove('offline');
-  }
+function notifyExtension(data) {
+  sendToExtension(data);
 }
 
 function closeExtAlert() {
@@ -920,18 +901,20 @@ function updateUrlMonitor() {
   const list = document.getElementById('url-monitor-list');
   const entries = Object.entries(S.tabTimers);
   if (entries.length === 0) return;
-
   list.innerHTML = entries
     .sort((a,b) => b[1]-a[1])
     .map(([domain, secs]) => {
       const isAllowed = S.allowedSites.includes(domain);
       const timeStr = secs < 60 ? `${secs}s` : `${Math.floor(secs/60)}m ${secs%60}s`;
       return `<div class="url-monitor-item ${isAllowed?'allowed':''}">
-        <span class="dom">${domain}</span>
-        <span class="time">${timeStr}</span>
+        <span class="dom">${domain}</span><span class="time">${timeStr}</span>
       </div>`;
     }).join('');
 }
+
+// Ping cada 4s para mantener estado de conexión
+setTimeout(checkExtension, 800);
+setInterval(checkExtension, 4000);
 
 // ==================== SESSION START ====================
 function startSession() {
@@ -1390,8 +1373,7 @@ function newSession() {
   ['student-name','course-name','session-objective'].forEach(id => { document.getElementById(id).value = ''; });
 }
 
-// Check extension on load
-setTimeout(checkExtension, 1000);
+// (extension check already set above)
 </script>
 </body>
 </html>
